@@ -57,33 +57,36 @@ y.updateChart(redrawChart).chart(svg);
 Now you need to call `y.addFloatingScaleLine(value)` function whenever you want to add Floating scale line.
 
 ```html
+
 <div style="padding: 10px;">
   <label>Add new Floating axis line</label>
   <input id="myValue" type="text" value="" />
   <input type="button" value="Add Floating Axis" onclick="updateValues()" />
- </div>
+</div>
 <script>
-   function updateValues() {
-      var value = parseFloat(document.querySelector('#myValue').value.trim());
-      y.addFloatingScaleLine(value);
-     }
+  function updateValues() {
+    var value = parseFloat(document.querySelector('#myValue').value.trim());
+    y.addFloatingScaleLine(value);
+ }
 </script>
+
 ```
 
 Let's add some style (CSS)
+
 ```css
-.floating
- {
+
+.floating {
   cursor: pointer;
   stroke: #FF0000;
   stroke-width: 1.5px;
  }
 
- .floatingLabel
- {
+ .floatingLabel {
   cursor: pointer;
   fill: #FF0000;
  }
+ 
 ```
 
 That's it.
