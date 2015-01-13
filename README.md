@@ -28,7 +28,7 @@ To specify number of ticks and format, use `y.tick()` instead of `yAxis.tick()`
 
 ```js
 
-//yAxis.tick(10, '%');
+//yAxis.ticks(10, '%');
 y.ticks(10, '%');
 
 ```
