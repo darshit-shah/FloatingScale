@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+    body
+    {
+        font: 10px sans-serif;
+    }
+    .bar
+    {
+        fill: steelblue;
+    }
+    
+    .bar:hover
+    {
+        fill: brown;
+    }
+    
+    .axis
+    {
+        font: 10px sans-serif;
+    }
+    
+    .axis path, .axis line
+    {
+        fill: none;
+        stroke: #000;
+        shape-rendering: crispEdges;
+    }
+    
+    .x.axis path
+    {
+        display: none;
+    }
+    
+    
+    .floating
+    {
+        cursor: pointer;
+        stroke: #FF0000;
+        stroke-width: 1.5px;
+    }
+    
+    .floatingLabel
+    {
+        cursor: pointer;
+        fill: #FF0000;
+    }
+</style>
+<body>
+    <h1>
+        Let's Create Bar Chart from <a href="http://bl.ocks.org/mbostock/3885304">Mike Bostock
+            Example</a></h1>
+    <div style="padding: 10px;">
+        <label>
+            Add new Floating axis line</label>
+        <input id="myValue" type="text" value="" />
+        <input type="button" value="Add Floating Axis" onclick="updateValues()" />
+    </div>
+    <script src="d3.v3.js"></script>
+    <script src="d3.floatingScale.js"></script>
+    <script>
+
+        var margin = { top: 20, right: 50, bottom: 30, left: 40 },
+    width = 960 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+
+        var x = d3.scale.ordinal().rangeRoundBands([0, width], .1);
+
+        //Replaced
+        //var y = d3.scale.linear().range([height, 0]);
+        var y = d3.svg.floatingScale().range([height, 0]).ticks(5, "%");
+
+        var xAxis = d3.svg.axis()
+                    .scale(x)
+                    .orient("bottom");
+
+        //Replaced
+        //var yAxis = d3.svg.axis().scale(y).orient("left");
+        var yAxis = y.axis().orient("left");
+
+        var svg = d3.select("body").append("svg")
+                    .attr("width", width + margin.left + margin.right)
+                    .attr("height", height + margin.top + margin.bottom)
+                  .append("g")
+                    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        var data = null;
+        var min = Infinity;
+        var max = -Infinity;
+        d3.csv("data.csv", type, function (error, file_data) {
+            data = file_data;
+            file_data = null;
+            x.domain(data.map(function (d) { return d.letter; }));
+            y.domain([0, d3.max(data, function (d) { return d.frequency; })]);
+
+            svg.append("g")
+              .attr("class", "x axis")
+              .attr("transform", "translate(0," + height + ")")
+              .call(xAxis);
+
+            svg.append("g")
+              .attr("class", "y axis")
+              .call(yAxis)
+            .append("text")
+              .attr("transform", "rotate(-90)")
+              .attr("y", 6)
+              .attr("dy", ".71em")
+              .style("text-anchor", "end")
+              .text("Frequency");
+
+            var bars = svg.selectAll(".bar")
+              .data(data);
+            bars.enter().append("rect")
+              .attr("class", "bar")
+              .attr("x", function (d) { return x(d.letter); })
+              .attr("width", x.rangeBand())
+              .attr("y", function (d) { return y(d.frequency); })
+              .attr("height", function (d) { return height - y(d.frequency); });
+
+            bars.exit().remove();
+
+            //added extra
+            y.updateChart(updateChart).chart(svg);
+
+        });
+
+        function updateChart(delay, duration) {
+
+            //added extra
+            svg.selectAll(".bar").transition().delay(delay).duration(duration).attr("y", function (d) {
+                return y(d.frequency);
+            })
+            .attr("height", function (d) {
+                return height - y(d.frequency);
+            });
+            svg.selectAll(".y.axis").transition().delay(delay).duration(duration).call(yAxis);
+        }
+
+        function type(d) {
+            d.frequency = +d.frequency;
+            return d;
+        }
+
+        function updateValues() {
+            var value = parseFloat(document.querySelector('#myValue').value.trim());
+            y.addFloatingScaleLine(value);
+        }
+
+        function updateFixedValues(value) {
+            var value = parseInt(document.querySelector('#numFixedValues').value.trim()) - 1;
+            y.ticks(value);
+        }
+
+    </script>
+</body>
