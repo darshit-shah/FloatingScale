@@ -92,4 +92,4 @@ Let's add some style (CSS)
 That's it.
 Try to make above changes to convert static scale/axis bar chart to floating scale/axis bar chart.
 
-Visit my [gist page](https://gist.github.com/darshit-shah/8dcadf25fae40257b0a9) to get source code of working example.
+Visit my [bl.ocks page](http://bl.ocks.org/darshit-shah/8dcadf25fae40257b0a9) to get source code of working example.
