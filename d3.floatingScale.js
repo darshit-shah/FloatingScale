@@ -13,6 +13,8 @@ d3.svg.floatingScale = function () {
     var max = -Infinity;
     var tickFormat = null;
     var lineWidth = 3;
+    var height = 100;
+    var width = 100;
 
     function floatingScale(value) {
         if (!isFinite(value)) {
@@ -83,7 +85,6 @@ d3.svg.floatingScale = function () {
                 .attr("text-anchor", "middle")
                 .attr("alignment-baseline", "middle")
                 .style("cursor", "pointer")
-                //.style("font-size", "12px")
                 .call(drag) //drag magic - built in d3 behavior: https://github.com/mbostock/d3/wiki/Drag-Behavior#wiki-drag;
                 ;
         floatingLabel.exit().remove();
@@ -98,8 +99,6 @@ d3.svg.floatingScale = function () {
                     return parseInt(d.value * 10) / 10;
                 return d3.format(tickFormat)(d.value);
             });
-
-
 
         return floatingScale;
     }
@@ -133,6 +132,7 @@ d3.svg.floatingScale = function () {
     floatingScale.scale = function (a) {
         if (a != undefined) {
             scale = a;
+            return floatingScale;
         }
         else
             return scale;
@@ -141,33 +141,56 @@ d3.svg.floatingScale = function () {
     floatingScale.axis = function (a) {
         if (a != undefined) {
             axis = a;
+            return floatingScale;
         }
         else
             return axis;
     }
 
+    floatingScale.height = function (a) {
+        if (a != undefined) {
+            height = a;
+            return floatingScale;
+        }
+        else
+            return height;
+    }
+
+    floatingScale.width = function (a) {
+        if (a != undefined) {
+            width = a;
+            return floatingScale;
+        }
+        else
+            return width;
+    }
+
     floatingScale.ticks = function () {
+
         if (arguments == undefined) {
             return tickValues.length;
         }
         arguments[0] = parseFloat(arguments[0]);
         if (isFinite(arguments[0]) && arguments[0] > 0) {
-            if (arguments[1] != undefined)
+            if (arguments[1] != undefined) {
+                axis.tickFormat(d3.format(arguments[1]));
                 tickFormat = arguments[1];
+            }
             axis.ticks.apply(this, arguments);
+
             var scaleValue = (height - 0) / arguments[0];
             tickValues = [];
             for (var i = 0; i < arguments[0] + 1; i++) {
                 tickValues.push(0 + (scaleValue * i))
             }
         }
-        updateLocalChart(0, 0);
+        updateLocalChart(delay, duration);
         return floatingScale;
     }
 
     floatingScale.tickValues = function (values) {
         if (values == undefined) {
-            values = [];
+            var values = [];
             for (var i = 0; i < tickValues.length; i++) {
                 values[i] = scale.invert(tickValues[i]);
             }
@@ -207,6 +230,27 @@ d3.svg.floatingScale = function () {
         }
     }
 
+    floatingScale.removeFloatingScaleLine = function (value) {
+        if (!isFinite(value)) {
+            throw "addFloatingScaleLine() only accepts a number";
+        }
+        if (value <= scaleValues[0].value) {
+            return { status: false, code: 100, message: "value should be between range:[" + min + " ," + max + "]" };
+        }
+        else if (value >= scaleValues[scaleValues.length - 1].value) {
+            return { status: false, code: 100, message: "value should be between range:[" + min + " ," + max + "]" };
+        }
+        for (var i = 1; i < scaleValues.length; i++) {
+            if (scaleValues[i].value === value) {
+                //                return { status: false, code: 101, message: "already added" };
+                //                return;
+                var index = i;
+                scaleValues.splice(index, 1);
+                updateLocalChart(delay, duration);
+            }
+        }
+    }
+
     floatingScale.invert = function (value) {
         if (!isFinite(value)) {
             throw "invert() only accepts a number";
@@ -227,13 +271,22 @@ d3.svg.floatingScale = function () {
         return floatingScale;
     }
     floatingScale.domain = function (values) {
+        if (values == undefined) {
+            return scale.domain();
+        }
         if (values.length !== 2) {
             throw "range() only accepts array of two";
         }
         scale.domain(values);
         scaleValues[0].value = values[0];
         scaleValues[scaleValues.length - 1].value = values[1];
+        while (scaleValues.length > 2) {
+            scaleValues.splice(1, 1);
+        }
+
+        // console.log(scaleValues, values);
         axis.tickValues(floatingScale.tickValues());
+        updateLocalChart(delay, duration);
         return floatingScale;
     }
     floatingScale.duration = function (d) {
