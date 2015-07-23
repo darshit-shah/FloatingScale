@@ -32,11 +32,16 @@ d3.svg.floatingScale = function () {
             scaleLines.pop();
             scaleLines.shift();
         }
-        var floatingLines = chart.selectAll(".y.axis.floating").data(scaleLines);
+
+        var xy = ((axis.orient() == 'left' || axis.orient() == 'right') ? 'y' : 'x');
+        var floatingLines = chart.selectAll(".axis.floating").data(scaleLines);
+
         floatingLines.enter().append("line")
-            .attr("class", "y axis floating")
+            .attr("class", "axis floating " + xy)
             .attr("x1", 0)
             .attr("x2", width)
+            .attr("y1", 0)
+            .attr("y2", height)
             .attr("stroke-dasharray", "5,5")
             .attr("index", function (d, i) { return i })
             .style("cursor", "pointer")
@@ -45,21 +50,21 @@ d3.svg.floatingScale = function () {
             ;
         floatingLines.exit().remove();
 
-        chart.selectAll(".y.axis.floating")
+        chart.selectAll(".axis.floating")
                 .transition()
                 .delay(delay)
                 .duration(duration)
-                .attr("y1", function (d) {
+                .attr(xy + "1", function (d) {
                     return floatingScale(d.value);
                 })
-                .attr("y2", function (d) {
+                .attr(xy + "2", function (d) {
                     return floatingScale(d.value);
                 });
 
-        var floatingCircle = chart.selectAll(".y.axis.floatingCircle").data(scaleLines);
+        var floatingCircle = chart.selectAll(".axis.floatingCircle").data(scaleLines);
         floatingCircle.enter().append("circle")
-                            .attr("class", "y axis floatingCircle")
-                            .attr("cx", width + 20)
+                            .attr("class", xy + " axis floatingCircle")
+                            .attr("c" + xy, (xy == 'x' ? height : width) + 20)
                             .attr("r", 20)
                             .style("stroke", "red")
                             .style("stroke-width", "3")
@@ -70,17 +75,17 @@ d3.svg.floatingScale = function () {
                             ;
         floatingCircle.exit().remove();
 
-        chart.selectAll(".y.axis.floatingCircle")
+        chart.selectAll(".axis.floatingCircle")
                         .transition()
                         .delay(delay)
                         .duration(duration)
-                        .attr("cy", function (d) { return floatingScale(d.value) })
+                        .attr("c" + xy, function (d) { return floatingScale(d.value) })
                         ;
 
-        var floatingLabel = chart.selectAll(".y.axis.floatingLabel").data(scaleLines);
+        var floatingLabel = chart.selectAll(".axis.floatingLabel").data(scaleLines);
         floatingLabel.enter().append("text")
-                .attr("class", "y axis floatingLabel")
-                .attr("x", width + 20)
+                .attr("class", xy + " axis floatingLabel")
+                .attr(xy, (xy == 'x' ? height : width) + 20)
                 .attr("index", function (d, i) { return i })
                 .attr("text-anchor", "middle")
                 .attr("alignment-baseline", "middle")
@@ -89,15 +94,20 @@ d3.svg.floatingScale = function () {
                 ;
         floatingLabel.exit().remove();
 
-        chart.selectAll(".y.axis.floatingLabel")
+        chart.selectAll(".axis.floatingLabel")
             .transition()
             .delay(delay)
             .duration(duration)
-            .attr("y", function (d) { return floatingScale(d.value) })
+            .attr(xy, function (d) { return floatingScale(d.value) })
             .text(function (d) {
                 if (tickFormat == undefined)
                     return parseInt(d.value * 10) / 10;
-                return d3.format(tickFormat)(d.value);
+                if (typeof tickFormat == "string")
+                    return d3.format(tickFormat)(d.value);
+                else if (typeof tickFormat == "function")
+                    return tickFormat(d.value);
+                else
+                    return d.value;
             });
 
         return floatingScale;
@@ -105,8 +115,12 @@ d3.svg.floatingScale = function () {
 
     function dragmove(dragged) {
         var index = parseInt(d3.select(dragged).attr("index"));
-        if (index > 0 && index < (scaleValues.length - 1) && scaleValues[index].y + d3.event.dy <= (scaleValues[index - 1].y - 10) && scaleValues[index].y + d3.event.dy >= (scaleValues[index + 1].y + 10)) {
-            scaleValues[index].y += d3.event.dy;
+        var pos = ((axis.orient() == 'left' || axis.orient() == 'right') ? d3.event.dy : d3.event.dx);
+        var prev = ((axis.orient() == 'left' || axis.orient() == 'right') ? -1 : 1);
+        var next = ((axis.orient() == 'left' || axis.orient() == 'right') ? 1 : -1);
+        //console.log(0, index, scaleValues.length - 1, scaleValues[index].y, pos, (scaleValues[index + prev].y - 10), (scaleValues[index + next].y + 10))
+        if (index > 0 && index < (scaleValues.length - 1) && scaleValues[index].y + pos <= (scaleValues[index + prev].y - 10) && scaleValues[index].y + pos >= (scaleValues[index + next].y + 10)) {
+            scaleValues[index].y += pos;
             updateLocalChart(0, 0);
         }
     }
@@ -173,12 +187,16 @@ d3.svg.floatingScale = function () {
         arguments[0] = parseFloat(arguments[0]);
         if (isFinite(arguments[0]) && arguments[0] > 0) {
             if (arguments[1] != undefined) {
-                axis.tickFormat(d3.format(arguments[1]));
-                tickFormat = arguments[1];
+                tickFormat = arguments[1]
+                if (typeof tickFormat == 'string')
+                    axis.tickFormat(d3.format(arguments[1]));
+                else if (typeof tickFormat == 'function')
+                    axis.tickFormat(arguments[1]);
+                else
+                    tickFormat = arguments[1];
             }
             axis.ticks.apply(this, arguments);
-
-            var scaleValue = (height - 0) / arguments[0];
+            var scaleValue = (((axis.orient() == 'left' || axis.orient() == 'right') ? height : width) - 0) / arguments[0];
             tickValues = [];
             for (var i = 0; i < arguments[0] + 1; i++) {
                 tickValues.push(0 + (scaleValue * i))
@@ -326,7 +344,9 @@ d3.svg.floatingScale = function () {
 
     var drag = d3.behavior.drag()
             .origin(Object)
-            .on("drag", function () { dragmove(this); })
+            .on("drag", function () {
+                dragmove(this);
+            })
             .on("dragstart", function () { dragstart(this); })
             .on("dragend", function () { dragend(this); });
 
